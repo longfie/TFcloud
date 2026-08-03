@@ -162,6 +162,48 @@ cp .env.example .env
 composer install --no-dev --optimize-autoloader
 ```
 
+
+
+#### 4. 启动后端
+
+```bash
+php start.php start
+```
+
+后端默认监听 `127.0.0.1:8787`。生产环境请使用 Supervisor、systemd 或宝塔进程守护保持运行。
+
+#### 5. 前端
+
+
+将 `frontend/dist` 配置为 Nginx 网站根目录，并把以下路径反向代理到 `http://127.0.0.1:8787`：
+
+```text
+/api/
+/health/
+/.well-known/
+```
+
+或者自行构建
+```bash
+cd ../frontend
+pnpm install --frozen-lockfile
+pnpm build
+```
+
+可参考仓库中的 [frontend/nginx.conf](frontend/nginx.conf)。手动部署时，将其中的 `backend:8787` 改为 `127.0.0.1:8787`。
+
+#### 6. 完成安装
+
+浏览器访问：
+
+```text
+https://你的域名/install
+```
+
+按照向导检测环境、填写数据库和创建管理员。安装完成后重启 Webman 进程，使应用密钥和后台任务配置生效。
+
+
+后续可自行修改env配置更换服务器连接以及设置签到进程数、加密密钥等
 编辑 `.env`，至少填写数据库连接和以下密钥：
 
 ```dotenv
@@ -183,41 +225,6 @@ php -r "echo 'base64:'.base64_encode(random_bytes(32)), PHP_EOL;"
 php -r "echo bin2hex(random_bytes(32)), PHP_EOL;"
 ```
 
-#### 4. 启动后端
-
-```bash
-php start.php start
-```
-
-后端默认监听 `127.0.0.1:8787`。生产环境请使用 Supervisor、systemd 或宝塔进程守护保持运行。
-
-#### 5. 构建前端
-
-```bash
-cd ../frontend
-pnpm install --frozen-lockfile
-pnpm build
-```
-
-将 `frontend/dist` 配置为 Nginx 网站根目录，并把以下路径反向代理到 `http://127.0.0.1:8787`：
-
-```text
-/api/
-/health/
-/.well-known/
-```
-
-可参考仓库中的 [frontend/nginx.conf](frontend/nginx.conf)。手动部署时，将其中的 `backend:8787` 改为 `127.0.0.1:8787`。
-
-#### 6. 完成安装
-
-浏览器访问：
-
-```text
-https://你的域名/install
-```
-
-按照向导检测环境、填写数据库和创建管理员。安装完成后重启 Webman 进程，使应用密钥和后台任务配置生效。
 
 也可以通过命令行创建管理员：
 
