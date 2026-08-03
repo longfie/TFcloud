@@ -1,0 +1,10 @@
+User-agent: *
+Allow: /
+Disallow: /TFYT
+Disallow: /api/
+Disallow: /login
+Disallow: /register
+Disallow: /qq-register
+Disallow: /forgot-password
+
+Sitemap: https://www.yunsign.net/sitemap.xml

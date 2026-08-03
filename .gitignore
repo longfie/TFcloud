@@ -1,0 +1,33 @@
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+
+# Environment and secrets
+.env
+.env.*
+!.env.example
+!.env.docker.example
+
+# Dependencies and build output
+vendor/
+node_modules/
+.pnpm-store/
+dist/
+dist-ssr/
+
+# Runtime files
+runtime/
+logs/
+*.log
+*.tmp
+*.bak
+
+# Local data and archives
+*.sql
+!backend/database/*.sql
+!backend/database/**/*.sql
+*.zip
+*.tar
+*.tar.gz
+*.tgz

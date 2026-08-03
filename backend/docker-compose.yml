@@ -1,0 +1,14 @@
+services:
+  backend:
+    build: .
+    restart: unless-stopped
+    env_file:
+      - .env
+    ports:
+      - "8787:8787"
+    volumes:
+      - tf_runtime:/app/runtime
+    stop_grace_period: 10s
+
+volumes:
+  tf_runtime:

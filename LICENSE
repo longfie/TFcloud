@@ -1,0 +1,8 @@
+TFcloud 原创业务代码采用 GNU Affero General Public License v3.0 or later
+(SPDX-License-Identifier: AGPL-3.0-or-later)。
+
+完整许可条款请参阅 GNU 官方文本：
+https://www.gnu.org/licenses/agpl-3.0.html
+
+本仓库中第三方组件、上游代码、Composer/npm 依赖和插件的许可证与版权声明
+继续适用，具体以对应目录中的 LICENSE、NOTICE 或源文件声明为准。

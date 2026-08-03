@@ -1,0 +1,51 @@
+{
+  "name": "tf/sign-platform",
+  "type": "project",
+  "keywords": [
+    "high performance",
+    "http service"
+  ],
+  "license": "MIT",
+  "description": "TF modular sign platform powered by Webman.",
+  "require": {
+    "php": "^8.4",
+    "workerman/webman-framework": "^2.2",
+    "monolog/monolog": "^2.11",
+    "webman/database": "^2.1",
+    "webman/console": "^2.2",
+    "vlucas/phpdotenv": "^5.6",
+    "phpmailer/phpmailer": "^6.10",
+    "symfony/polyfill-php86": "^1.36"
+  },
+  "suggest": {
+    "ext-event": "For better performance. "
+  },
+  "autoload": {
+    "psr-4": {
+      "app\\": "./app",
+      "plugin\\": "./plugin",
+      "support\\": "./support"
+    },
+    "files": [
+      "support/polyfill_sort_direction.php"
+    ]
+  },
+  "scripts": {
+    "post-package-install": [
+      "support\\Plugin::install"
+    ],
+    "post-package-update": [
+      "support\\Plugin::install"
+    ],
+    "pre-package-uninstall": [
+      "support\\Plugin::uninstall"
+    ],
+    "post-create-project-cmd": [
+      "support\\Setup::run"
+    ],
+    "setup-webman": [
+      "support\\Setup::run"
+    ]
+  },
+  "prefer-stable": true
+}

@@ -1,0 +1,61 @@
+services:
+  mysql:
+    image: mysql:8.4
+    restart: unless-stopped
+    command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
+    environment:
+      MYSQL_DATABASE: ${DB_NAME:-tf_sign}
+      MYSQL_USER: ${DB_USER:-tf_sign}
+      MYSQL_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD is required}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?MYSQL_ROOT_PASSWORD is required}
+    volumes:
+      - tf_mysql:/var/lib/mysql
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -u root -p\"$$MYSQL_ROOT_PASSWORD\" --silent"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 20s
+
+  backend:
+    build:
+      context: ./backend
+    restart: unless-stopped
+    env_file:
+      - .env.docker
+    environment:
+      DB_HOST: mysql
+      DB_PORT: 3306
+      INSTALL_ENV_PATH: /app/runtime/.env
+      MYSQL_ROOT_PASSWORD: ""
+    depends_on:
+      mysql:
+        condition: service_healthy
+    expose:
+      - "8787"
+    volumes:
+      - tf_runtime:/app/runtime
+      - tf_vendor:/app/vendor
+    healthcheck:
+      test: ["CMD", "php", "-r", "$$f=@fsockopen('127.0.0.1',8787); exit($$f ? 0 : 1);"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 15s
+    stop_grace_period: 10s
+
+  frontend:
+    build:
+      context: ./frontend
+    restart: unless-stopped
+    depends_on:
+      backend:
+        condition: service_healthy
+    ports:
+      - "${APP_PORT:-8080}:80"
+    stop_grace_period: 10s
+
+volumes:
+  tf_mysql:
+  tf_runtime:
+  tf_vendor:

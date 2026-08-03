@@ -1,0 +1,9 @@
+.env
+runtime
+vendor
+tests
+test
+.git
+*.md
+*.log
+.DS_Store
