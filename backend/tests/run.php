@@ -21,6 +21,14 @@ $assert(!preg_match('/TF_(orders|payment_products|payment_transactions|redeem_ca
 $assert(str_contains($schema, 'TF_sign_tasks'), 'core sign task table must exist');
 $assert(str_contains($schema, 'TF_plugin_credentials'), 'encrypted credential table must exist');
 $assert(str_contains($schema, 'TF_notification_events'), 'notification event table must exist');
+$scheduler = (string)file_get_contents($root . '/app/service/SignSchedulerService.php');
+$process = (string)file_get_contents($root . '/config/process.php');
+$schedule = (string)file_get_contents($root . '/app/sign/schedule/DailySchedule.php');
+$assert(str_contains($scheduler, 'recordDispatchFailure($account, $exception)'), 'one broken account must not stop the whole scheduler batch');
+$assert(str_contains($scheduler, 'normalizeLegacy'), 'scheduler must recover legacy schedule settings');
+$assert(str_contains($schedule, 'normalizeLegacy'), 'daily schedule must provide legacy settings compatibility');
+$assert(str_contains($process, "\$envFlag('SIGN_WORKER_ENABLED', true)"), 'sign worker must stay enabled by default on upgraded installs');
+$assert(str_contains($process, "\$envFlag('SIGN_SCHEDULER_ENABLED', \$signWorkerEnabled)"), 'scheduler must follow the core worker when its env flag is absent');
 $assert(str_contains($route, "qq-relay/apply"), 'QQ relay application route must exist');
 $assert(str_contains($route, "qq-login-verification.txt"), 'QQ relay verification route must exist');
 $assert(str_contains($settings, "qq_relay_application_status"), 'QQ relay application settings must exist');

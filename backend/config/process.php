@@ -18,6 +18,16 @@ use app\process\Http;
 
 global $argv;
 
+$envFlag = static function (string $name, bool $default): bool {
+    $value = getenv($name);
+    if ($value === false || trim((string)$value) === '') {
+        return $default;
+    }
+    return filter_var($value, FILTER_VALIDATE_BOOL);
+};
+$signWorkerEnabled = $envFlag('SIGN_WORKER_ENABLED', true);
+$signSchedulerEnabled = $envFlag('SIGN_SCHEDULER_ENABLED', $signWorkerEnabled);
+
 return [
     'webman' => [
         'handler' => Http::class,
@@ -63,25 +73,21 @@ return [
         'handler' => app\process\SignWorker::class,
         'count' => (int)(getenv('SIGN_WORKER_COUNT') ?: 1),
         'reloadable' => true,
-        'enable' => filter_var(getenv('SIGN_WORKER_ENABLED') ?: false, FILTER_VALIDATE_BOOL),
+        // 自动任务是核心能力。兼容没有这些新变量的旧版 .env；显式 false 仍会关闭。
+        'enable' => $signWorkerEnabled,
     ],
     'tieba-retry-worker' => [
         'handler' => app\process\TiebaRetryWorker::class,
         'count' => (int)(getenv('TIEBA_RETRY_WORKER_COUNT') ?: 1),
         'reloadable' => true,
         // 旧版 .env 没有专用开关时跟随普通签到 Worker，升级后无需额外配置。
-        'enable' => filter_var(
-            getenv('TIEBA_RETRY_WORKER_ENABLED') !== false
-                ? getenv('TIEBA_RETRY_WORKER_ENABLED')
-                : (getenv('SIGN_WORKER_ENABLED') ?: false),
-            FILTER_VALIDATE_BOOL
-        ),
+        'enable' => $envFlag('TIEBA_RETRY_WORKER_ENABLED', $signWorkerEnabled),
     ],
     'sign-scheduler' => [
         'handler' => app\process\SignScheduler::class,
         'count' => 1,
         'reloadable' => true,
-        'enable' => filter_var(getenv('SIGN_SCHEDULER_ENABLED') ?: false, FILTER_VALIDATE_BOOL),
+        'enable' => $signSchedulerEnabled,
     ],
     'mail-worker' => [
         'handler' => app\process\MailWorker::class,

@@ -3,6 +3,7 @@
 namespace app\service;
 
 use app\exception\ApiException;
+use app\sign\schedule\DailySchedule;
 use support\Db;
 
 final class AdminService
@@ -178,10 +179,10 @@ final class AdminService
             'a.status', 'a.settings_json', 'a.profile_json', 'a.last_verified_at', 'a.last_run_at', 'a.next_run_at',
             'a.last_error_code', 'a.last_error_message', 'a.created_at', 'a.updated_at', 'c.id as credential_id',
         ])->map(static function ($row): array {
-            $settings = json_decode((string)($row->settings_json ?? '{}'), true) ?: [];
-            if (!isset($settings['schedule_mode'])) {
-                $settings['schedule_mode'] = !empty($settings['schedule_enabled']) ? 'fixed' : 'auto';
-            }
+            $settings = DailySchedule::normalizeLegacy(
+                json_decode((string)($row->settings_json ?? '{}'), true) ?: [],
+                $row->next_run_at !== null ? (string)$row->next_run_at : null
+            );
             $profile = json_decode((string)($row->profile_json ?? '{}'), true) ?: [];
             $avatarUrl = trim((string)($profile['avatar'] ?? ''));
             $expired = $row->status === 'credential_expired'

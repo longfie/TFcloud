@@ -82,6 +82,10 @@
 
 签到操作统一转换为可追踪的任务，由后台 Worker 异步执行。
 
+调度器会逐个账号创建任务，单个账号的旧配置或临时异常不会阻塞其他账号。旧版本仅保存
+`schedule_enabled`、没有 `schedule_time` 的账号会沿用数据库中已有的 `next_run_at` 时间；如果没有可恢复的时间，则自动切换为错峰计划。升级旧版 `.env` 时无需补写新增 Worker 开关，
+`SIGN_WORKER_ENABLED` 和 `SIGN_SCHEDULER_ENABLED` 缺失时默认启用，显式设置为 `false` 仍会关闭对应进程。
+
 任务系统支持：
 
 * 手动创建任务；
