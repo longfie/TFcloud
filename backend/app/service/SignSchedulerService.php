@@ -2,9 +2,12 @@
 
 namespace app\service;
 
+use app\sign\executor\SensitiveDataRedactor;
 use app\sign\registry\PluginRegistry;
 use app\sign\schedule\DailySchedule;
 use support\Db;
+use support\Log;
+use Throwable;
 
 final class SignSchedulerService
 {
@@ -24,33 +27,73 @@ final class SignSchedulerService
 
         $dispatched = 0;
         foreach ($accounts as $account) {
-            $plugin = (new PluginRegistry())->get((string)$account->plugin_code);
-            if ($plugin->metadata()->implementationStatus !== 'ready') {
-                Db::table('TF_plugin_accounts')->where('id', $account->id)->update([
-                    'next_run_at' => null,
-                    'updated_at' => date('Y-m-d H:i:s'),
-                ]);
-                continue;
+            try {
+                if ($this->dispatchAccount($account)) {
+                    $dispatched++;
+                }
+            } catch (Throwable $exception) {
+                $this->recordDispatchFailure($account, $exception);
             }
-
-            $settings = json_decode((string)($account->settings_json ?? '{}'), true) ?: [];
-            $action = trim((string)($settings['scheduled_action'] ?? ($plugin->supportedActions()[0] ?? '')));
-            (new SignTaskService())->create(
-                (int)$account->user_id,
-                (int)$account->id,
-                $action,
-                'schedule',
-                date('Y-m-d')
-            );
-
-            Db::table('TF_plugin_accounts')->where('id', $account->id)->update([
-                'next_run_at' => DailySchedule::next($settings, $this->seed($account)),
-                'updated_at' => date('Y-m-d H:i:s'),
-            ]);
-            $dispatched++;
         }
 
         return $dispatched;
+    }
+
+    private function dispatchAccount(object $account): bool
+    {
+        $plugin = (new PluginRegistry())->get((string)$account->plugin_code);
+        if ($plugin->metadata()->implementationStatus !== 'ready') {
+            Db::table('TF_plugin_accounts')->where('id', $account->id)->update([
+                'next_run_at' => null,
+                'updated_at' => date('Y-m-d H:i:s'),
+            ]);
+            return false;
+        }
+
+        $settings = DailySchedule::normalizeLegacy(
+            json_decode((string)($account->settings_json ?? '{}'), true) ?: [],
+            $account->next_run_at !== null ? (string)$account->next_run_at : null
+        );
+        // 在创建任务前先计算下次时间，避免异常配置留下半批任务并卡住队首。
+        $nextRunAt = DailySchedule::next($settings, $this->seed($account));
+        $action = trim((string)($settings['scheduled_action'] ?? ($plugin->supportedActions()[0] ?? '')));
+        (new SignTaskService())->create(
+            (int)$account->user_id,
+            (int)$account->id,
+            $action,
+            'schedule',
+            date('Y-m-d')
+        );
+
+        Db::table('TF_plugin_accounts')->where('id', $account->id)->update([
+            'next_run_at' => $nextRunAt,
+            'updated_at' => date('Y-m-d H:i:s'),
+        ]);
+        return true;
+    }
+
+    private function recordDispatchFailure(object $account, Throwable $exception): void
+    {
+        $message = (new SensitiveDataRedactor())->redactString($exception->getMessage());
+        Log::error('account schedule dispatch failed', [
+            'account_id' => (int)$account->id,
+            'plugin_code' => (string)$account->plugin_code,
+            'exception' => $exception::class,
+            'message' => $message,
+        ]);
+        try {
+            Db::table('TF_plugin_accounts')->where('id', $account->id)->update([
+                'next_run_at' => date('Y-m-d H:i:s', time() + 300),
+                'last_error_code' => 'SCHEDULE_DISPATCH_FAILED',
+                'last_error_message' => mb_substr($message !== '' ? $message : '自动任务创建失败', 0, 500),
+                'updated_at' => date('Y-m-d H:i:s'),
+            ]);
+        } catch (Throwable $updateException) {
+            Log::error('account schedule failure state update failed', [
+                'account_id' => (int)$account->id,
+                'exception' => $updateException::class,
+            ]);
+        }
     }
 
     /**

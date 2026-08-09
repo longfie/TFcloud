@@ -184,7 +184,10 @@ final class PluginAccountService
             || array_key_exists('status', $input)
             || array_key_exists('credentials', $input)) {
             $current = $this->findOwned($userId, $accountId);
-            $settings = json_decode((string)($current->settings_json ?? '{}'), true) ?: [];
+            $settings = DailySchedule::normalizeLegacy(
+                json_decode((string)($current->settings_json ?? '{}'), true) ?: [],
+                $current->next_run_at !== null ? (string)$current->next_run_at : null
+            );
             $plugin = (new PluginRegistry())->get((string)$current->plugin_code);
             $nextRunAt = in_array($current->status, ['active', 'pending_verification'], true)
                 && $plugin->metadata()->implementationStatus === 'ready'
@@ -312,7 +315,10 @@ final class PluginAccountService
         );
         $encrypted['fingerprint'] = $fingerprint;
         $now = date('Y-m-d H:i:s');
-        $settings = json_decode((string)($account->settings_json ?? '{}'), true) ?: [];
+        $settings = DailySchedule::normalizeLegacy(
+            json_decode((string)($account->settings_json ?? '{}'), true) ?: [],
+            $account->next_run_at !== null ? (string)$account->next_run_at : null
+        );
         $nextRunAt = $plugin->metadata()->implementationStatus === 'ready'
             ? DailySchedule::next($settings, $account->plugin_code . ':' . $account->user_id . ':' . $account->id)
             : null;
@@ -388,10 +394,10 @@ final class PluginAccountService
         $credentialConfigured = property_exists($row, 'credential_id')
             ? (bool)$row->credential_id
             : Db::table('TF_plugin_credentials')->where('account_id', $row->id)->exists();
-        $settings = json_decode((string)($row->settings_json ?? '{}'), true) ?: [];
-        if (!isset($settings['schedule_mode'])) {
-            $settings['schedule_mode'] = !empty($settings['schedule_enabled']) ? 'fixed' : 'auto';
-        }
+        $settings = DailySchedule::normalizeLegacy(
+            json_decode((string)($row->settings_json ?? '{}'), true) ?: [],
+            $row->next_run_at !== null ? (string)$row->next_run_at : null
+        );
         $profile = json_decode((string)($row->profile_json ?? '{}'), true) ?: [];
         $avatarUrl = trim((string)($profile['avatar'] ?? ''));
         $credentialExpired = $row->status === 'credential_expired'
