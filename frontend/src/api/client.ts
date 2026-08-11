@@ -4,6 +4,34 @@ import type { ApiEnvelope } from '@/types/sign';
 
 export const AUTH_TOKEN_KEY = 'tf-sign-access-token';
 export const AUTH_EXPIRED_EVENT = 'tf-sign-auth-expired';
+export const GLOBAL_LOADING_EVENT = 'tf-global-loading';
+
+let activeRequests = 0;
+const trackedRequests = new WeakSet<object>();
+
+export function getActiveRequestCount () {
+  return activeRequests;
+}
+
+function emitLoadingState () {
+  window.dispatchEvent(new CustomEvent(GLOBAL_LOADING_EVENT, {
+    detail: { active: activeRequests },
+  }));
+}
+
+function beginRequest (config: object) {
+  if (trackedRequests.has(config)) return;
+  trackedRequests.add(config);
+  activeRequests += 1;
+  emitLoadingState();
+}
+
+function finishRequest (config?: object) {
+  if (!config || !trackedRequests.has(config)) return;
+  trackedRequests.delete(config);
+  activeRequests = Math.max(0, activeRequests - 1);
+  emitLoadingState();
+}
 
 export class ApiError extends Error {
   constructor (
@@ -32,14 +60,19 @@ function redirectToInstaller (code?: string) {
 }
 
 client.interceptors.request.use((config) => {
+  beginRequest(config);
   const token = localStorage.getItem(AUTH_TOKEN_KEY);
   if (token) config.headers.Authorization = `Bearer ${token}`;
   return config;
 });
 
 client.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    finishRequest(response.config);
+    return response;
+  },
   (error) => {
+    finishRequest(error.config);
     const status = Number(error.response?.status || 0);
     const envelope = error.response?.data as Partial<ApiEnvelope<unknown>> | undefined;
     redirectToInstaller(envelope?.code);

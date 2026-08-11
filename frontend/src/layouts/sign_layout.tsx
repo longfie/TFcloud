@@ -24,6 +24,7 @@ import PlatformLogo from '@/components/platform_logo';
 import { ThemeSwitch } from '@/components/theme-switch';
 import { useSignAuth } from '@/contexts/auth';
 import { useSite } from '@/contexts/site';
+import { usePageLoading } from '@/hooks/use-page-loading';
 
 interface NavItem {
   label: string;
@@ -57,6 +58,7 @@ export default function SignLayout () {
   const site = useSite();
   const location = useLocation();
   const navigate = useNavigate();
+  const pageLoading = usePageLoading();
   const visibleNav = useMemo(
     () => navItems.filter((item) => (
       (!item.admin || user?.role === 'admin')
@@ -153,7 +155,15 @@ export default function SignLayout () {
             <Dropdown placement='bottom-end'>
               <DropdownTrigger>
                 <Button variant='light' className='h-11 min-w-0 gap-2 rounded-2xl px-2 sm:px-3'>
-                  <Avatar size='sm' src={userAvatar} name={user?.username || 'U'} />
+                  <span className='relative inline-flex h-8 w-8 shrink-0 items-center justify-center'>
+                    <Avatar size='sm' src={userAvatar} name={user?.username || 'U'} className='h-8 w-8 shrink-0' />
+                    <span
+                      aria-hidden
+                      className={`absolute -inset-1 rounded-full transition-opacity duration-150 [backface-visibility:hidden] [contain:paint] [transform:translateZ(0)] ${pageLoading ? 'opacity-100' : 'opacity-0'}`}
+                    >
+                      <span className={`absolute inset-0 origin-center rounded-full border-2 border-primary/20 border-t-primary [backface-visibility:hidden] [will-change:transform] motion-reduce:animate-pulse ${pageLoading ? 'animate-spin' : ''}`} />
+                    </span>
+                  </span>
                   <span className='hidden max-w-28 truncate text-sm sm:block'>{user?.username}</span>
                 </Button>
               </DropdownTrigger>

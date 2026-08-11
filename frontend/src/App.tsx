@@ -4,6 +4,7 @@ import { Navigate, Outlet, Route, Routes, useLocation } from 'react-router-dom';
 
 import { ConfirmCardHost } from '@/components/confirm_card';
 import PageBackground from '@/components/page_background';
+import PageLoadingBar from '@/components/page_loading_bar';
 import Toaster from '@/components/toaster';
 import { AuthProvider, useSignAuth } from '@/contexts/auth';
 import { SiteProvider } from '@/contexts/site';
@@ -63,6 +64,7 @@ export default function App () {
     <SiteProvider>
     <AuthProvider>
       <PageBackground />
+      <PageLoadingBar />
       <Toaster />
       <ConfirmCardHost />
       <Suspense fallback={<LoadingScreen />}>
