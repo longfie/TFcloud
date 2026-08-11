@@ -14,7 +14,7 @@ final class BilibiliPlugin extends AbstractSignPlugin
 {
     public function metadata(): PluginMetadata
     {
-        return new PluginMetadata('bilibili', '哔哩哔哩', '0.3.1', '哔哩哔哩主站与直播每日任务插件');
+        return new PluginMetadata('bilibili', '哔哩哔哩', '0.4.0', '哔哩哔哩主站、直播每日任务与粉丝牌挂机插件');
     }
 
     public function credentialRules(): array
@@ -24,6 +24,9 @@ final class BilibiliPlugin extends AbstractSignPlugin
             'bili_jct' => ['required', 'string'],
             'dede_user_id' => ['required', 'string'],
             'dede_user_id_ckmd5' => ['nullable', 'string'],
+            'live_buvid' => ['nullable', 'string'],
+            'buvid3' => ['nullable', 'string'],
+            'buvid4' => ['nullable', 'string'],
         ];
     }
 
@@ -43,6 +46,7 @@ final class BilibiliPlugin extends AbstractSignPlugin
             'live_sign',
             'live_daily_bag',
             'live_heartbeat',
+            'live_fans_medal',
             'capsule_open',
             'comic_sign',
         ];
@@ -51,6 +55,9 @@ final class BilibiliPlugin extends AbstractSignPlugin
     public function execute(SignContext $context): SignResult
     {
         $this->requireCredentials($context->credentials, ['sessdata', 'bili_jct', 'dede_user_id']);
+        if ($context->action === 'live_fans_medal') {
+            throw new \LogicException('粉丝牌挂机任务必须由独立 Bilibili Live Worker 执行');
+        }
         $client = new BilibiliClient($context->credentials);
         $actions = $context->action === 'daily_tasks'
             ? $this->dailyActions($context->settings)

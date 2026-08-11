@@ -17,12 +17,14 @@ final class SignTaskExecutor
 {
     public const QUEUE_DEFAULT = 'default';
     public const QUEUE_TIEBA_RETRY = 'tieba_retry';
+    public const QUEUE_BILIBILI_LIVE = 'bilibili_live';
 
     public function recoverStale(int $timeoutSeconds = 7200, int $limit = 100): int
     {
         $cutoff = date('Y-m-d H:i:s', time() - max(300, $timeoutSeconds));
         $tasks = Db::table('TF_sign_tasks')
             ->where('status', 'running')
+            ->where('queue_name', '!=', self::QUEUE_BILIBILI_LIVE)
             ->whereNotNull('locked_at')
             ->where('locked_at', '<', $cutoff)
             ->orderBy('locked_at')
@@ -87,6 +89,7 @@ final class SignTaskExecutor
                 ->where('plugin_code', 'tieba')
                 ->where('last_error_code', 'UPSTREAM_REQUEST_FAILED');
         } else {
+            $candidateQuery->where('queue_name', self::QUEUE_DEFAULT);
             // 独立补签进程专门领取贴吧请求失败任务，普通签到 Worker 不再竞争它们。
             $candidateQuery->where(function ($query): void {
                 $query->where('status', 'pending')

@@ -86,6 +86,10 @@
 `schedule_enabled`、没有 `schedule_time` 的账号会沿用数据库中已有的 `next_run_at` 时间；如果没有可恢复的时间，则自动切换为错峰计划。升级旧版 `.env` 时无需补写新增 Worker 开关，
 `SIGN_WORKER_ENABLED` 和 `SIGN_SCHEDULER_ENABLED` 缺失时默认启用，显式设置为 `false` 仍会关闭对应进程。
 
+哔哩哔哩粉丝牌挂机使用独立的 `bilibili-live-worker`。Worker 通过异步 HTTP
+和事件循环逐步推进会话，不会在回调中执行阻塞等待；并发数、单主机连接数和请求超时均可通过
+`BILIBILI_LIVE_*` 环境变量调整。旧版 `.env` 未配置专用开关时会跟随普通签到 Worker。
+
 任务系统支持：
 
 * 手动创建任务；

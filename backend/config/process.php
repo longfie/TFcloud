@@ -83,6 +83,12 @@ return [
         // 旧版 .env 没有专用开关时跟随普通签到 Worker，升级后无需额外配置。
         'enable' => $envFlag('TIEBA_RETRY_WORKER_ENABLED', $signWorkerEnabled),
     ],
+    'bilibili-live-worker' => [
+        'handler' => app\process\BilibiliLiveWorker::class,
+        'count' => (int)(getenv('BILIBILI_LIVE_WORKER_COUNT') ?: 2),
+        'reloadable' => true,
+        'enable' => $envFlag('BILIBILI_LIVE_WORKER_ENABLED', $signWorkerEnabled),
+    ],
     'sign-scheduler' => [
         'handler' => app\process\SignScheduler::class,
         'count' => 1,

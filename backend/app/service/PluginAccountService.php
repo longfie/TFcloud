@@ -277,6 +277,36 @@ final class PluginAccountService
         );
     }
 
+    /** 合并直播接口在运行期补发的 Cookie，不触发同步账号校验。 */
+    public function mergeRuntimeCredentials(int $accountId, array $patch): array
+    {
+        $allowed = array_intersect_key($patch, array_flip(['live_buvid', 'buvid3', 'buvid4']));
+        $allowed = array_filter($allowed, static fn ($value): bool => is_string($value) && trim($value) !== '');
+        if ($allowed === []) {
+            return [];
+        }
+        return Db::transaction(function () use ($accountId, $allowed): array {
+            $account = Db::table('TF_plugin_accounts')->where('id', $accountId)->lockForUpdate()->first();
+            if (!$account || (string)$account->plugin_code !== 'bilibili') {
+                throw new ApiException('PLUGIN_ACCOUNT_NOT_FOUND', '哔哩哔哩账号不存在', 404);
+            }
+            $credential = Db::table('TF_plugin_credentials')->where('account_id', $accountId)->lockForUpdate()->first();
+            if (!$credential) {
+                throw new ApiException('PLUGIN_CREDENTIAL_MISSING', '插件凭据不存在', 409);
+            }
+            $vault = new CredentialVault();
+            $associatedData = CredentialVault::associatedData('bilibili', $accountId, (string)$credential->credential_type);
+            $current = $vault->decrypt($credential->payload_cipher, $credential->nonce, $associatedData);
+            $merged = array_replace($current, $allowed);
+            $encrypted = $vault->encrypt($merged, $associatedData);
+            Db::table('TF_plugin_credentials')->where('id', $credential->id)->update($encrypted + [
+                'rotated_at' => date('Y-m-d H:i:s'),
+                'updated_at' => date('Y-m-d H:i:s'),
+            ]);
+            return $merged;
+        });
+    }
+
     public function findOwned(int $userId, int $accountId): object
     {
         $account = Db::table('TF_plugin_accounts')
@@ -545,6 +575,10 @@ final class PluginAccountService
             'live_sign_enabled',
             'live_daily_bag_enabled',
             'live_heartbeat_enabled',
+            'live_fans_medal_enabled',
+            'live_send_danmaku_enabled',
+            'live_like_enabled',
+            'live_skip_level_20_medal',
             'capsule_enabled',
             'allow_capsule_spend',
             'comic_sign_enabled',
@@ -566,6 +600,24 @@ final class PluginAccountService
             if ($count === false || $count < 1 || $count > 100) {
                 throw new ApiException('VALIDATION_FAILED', '单次使用扭蛋币数量必须在 1 到 100 之间', 422);
             }
+        }
+        foreach ([
+            'live_heartbeat_count' => [1, 180],
+            'live_max_rooms' => [1, 50],
+            'live_max_failures' => [1, 20],
+            'live_like_count' => [1, 100],
+        ] as $key => [$min, $max]) {
+            if (!array_key_exists($key, $settings)) {
+                continue;
+            }
+            $value = filter_var($settings[$key], FILTER_VALIDATE_INT);
+            if ($value === false || $value < $min || $value > $max) {
+                throw new ApiException('VALIDATION_FAILED', $key . " 必须在 {$min} 到 {$max} 之间", 422);
+            }
+        }
+        if (isset($settings['live_danmaku_content'])
+            && mb_strlen(trim((string)$settings['live_danmaku_content'])) > 20) {
+            throw new ApiException('VALIDATION_FAILED', '直播弹幕内容不能超过 20 个字符', 422);
         }
         if (array_key_exists('live_room_id', $settings) && trim((string)$settings['live_room_id']) !== '') {
             $roomId = trim((string)$settings['live_room_id']);
