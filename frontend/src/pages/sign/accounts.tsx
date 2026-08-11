@@ -51,6 +51,15 @@ interface AccountForm {
   bili_live_daily_bag_enabled: boolean;
   bili_live_heartbeat_enabled: boolean;
   bili_live_room_id: string;
+  bili_live_fans_medal_enabled: boolean;
+  bili_live_heartbeat_count: string;
+  bili_live_max_rooms: string;
+  bili_live_max_failures: string;
+  bili_live_skip_level_20: boolean;
+  bili_live_like: boolean;
+  bili_live_like_count: string;
+  bili_live_send_danmaku: boolean;
+  bili_live_danmaku_content: string;
   bili_capsule_enabled: boolean;
   bili_allow_capsule_spend: boolean;
   bili_capsule_count: string;
@@ -69,6 +78,10 @@ const emptyForm: AccountForm = {
   bili_watch_enabled: true, bili_share_enabled: true, bili_coin_enabled: false,
   bili_allow_coin_spend: false, bili_coin_count: '1', bili_live_sign_enabled: true,
   bili_live_daily_bag_enabled: false, bili_live_heartbeat_enabled: false, bili_live_room_id: '',
+  bili_live_fans_medal_enabled: false, bili_live_heartbeat_count: '70',
+  bili_live_max_rooms: '5', bili_live_max_failures: '5', bili_live_skip_level_20: true,
+  bili_live_like: true, bili_live_like_count: '1', bili_live_send_danmaku: false,
+  bili_live_danmaku_content: 'OvO',
   bili_capsule_enabled: false, bili_allow_capsule_spend: false, bili_capsule_count: '1',
   bili_comic_sign_enabled: false,
   sport_step_mode: 'fixed', sport_steps: '18000', sport_min_steps: '18000',
@@ -353,6 +366,15 @@ export default function AccountsPage () {
       bili_live_daily_bag_enabled: account.settings.live_daily_bag_enabled === true,
       bili_live_heartbeat_enabled: account.settings.live_heartbeat_enabled === true,
       bili_live_room_id: String(account.settings.live_room_id || ''),
+      bili_live_fans_medal_enabled: account.settings.live_fans_medal_enabled === true,
+      bili_live_heartbeat_count: String(account.settings.live_heartbeat_count || '70'),
+      bili_live_max_rooms: String(account.settings.live_max_rooms || '5'),
+      bili_live_max_failures: String(account.settings.live_max_failures || '5'),
+      bili_live_skip_level_20: account.settings.live_skip_level_20_medal !== false,
+      bili_live_like: account.settings.live_like_enabled !== false,
+      bili_live_like_count: String(account.settings.live_like_count || '1'),
+      bili_live_send_danmaku: account.settings.live_send_danmaku_enabled === true,
+      bili_live_danmaku_content: String(account.settings.live_danmaku_content || 'OvO'),
       bili_capsule_enabled: account.settings.capsule_enabled === true,
       bili_allow_capsule_spend: account.settings.allow_capsule_spend === true,
       bili_capsule_count: String(account.settings.capsule_count || '1'),
@@ -395,6 +417,15 @@ export default function AccountsPage () {
       live_daily_bag_enabled: form.bili_live_daily_bag_enabled,
       live_heartbeat_enabled: form.bili_live_heartbeat_enabled,
       live_room_id: form.bili_live_room_id.trim(),
+      live_fans_medal_enabled: form.bili_live_fans_medal_enabled,
+      live_heartbeat_count: Math.max(1, Math.min(180, Number(form.bili_live_heartbeat_count) || 70)),
+      live_max_rooms: Math.max(1, Math.min(50, Number(form.bili_live_max_rooms) || 5)),
+      live_max_failures: Math.max(1, Math.min(20, Number(form.bili_live_max_failures) || 5)),
+      live_skip_level_20_medal: form.bili_live_skip_level_20,
+      live_like_enabled: form.bili_live_like,
+      live_like_count: Math.max(1, Math.min(100, Number(form.bili_live_like_count) || 1)),
+      live_send_danmaku_enabled: form.bili_live_send_danmaku,
+      live_danmaku_content: form.bili_live_danmaku_content.trim() || 'OvO',
       capsule_enabled: form.bili_capsule_enabled,
       allow_capsule_spend: form.bili_allow_capsule_spend,
       capsule_count: Math.max(1, Math.min(100, Number(form.bili_capsule_count) || 1)),
@@ -617,6 +648,18 @@ export default function AccountsPage () {
                 <Input className='sm:col-span-2' label='直播间 ID' description='开启直播心跳后必填；每次任务提交一次有限心跳，不会常驻挂机。' value={form.bili_live_room_id} onValueChange={(value) => setForm((current) => ({ ...current, bili_live_room_id: value.replace(/\D/g, '') }))} />
               </div>
               <div className='my-4 h-px bg-divider' />
+              <div className='mb-3'><div className='flex items-center justify-between gap-3'><div><h5 className='text-sm font-medium'>粉丝牌直播挂机</h5><p className='mt-1 text-xs text-default-500'>独立 Worker 使用事件循环推进心跳，不占用普通签到进程。</p></div><Switch size='sm' color='secondary' isSelected={form.bili_live_fans_medal_enabled} onValueChange={(value) => setForm((current) => ({ ...current, bili_live_fans_medal_enabled: value }))}>启用</Switch></div></div>
+              <div className='grid gap-3 sm:grid-cols-2'>
+                <Input label='目标心跳次数' type='number' min={1} max={180} isDisabled={!form.bili_live_fans_medal_enabled} value={form.bili_live_heartbeat_count} onValueChange={(value) => setForm((current) => ({ ...current, bili_live_heartbeat_count: value }))} />
+                <Input label='最多直播间' type='number' min={1} max={50} isDisabled={!form.bili_live_fans_medal_enabled} value={form.bili_live_max_rooms} onValueChange={(value) => setForm((current) => ({ ...current, bili_live_max_rooms: value }))} />
+                <Input label='失败停止阈值' type='number' min={1} max={20} isDisabled={!form.bili_live_fans_medal_enabled} value={form.bili_live_max_failures} onValueChange={(value) => setForm((current) => ({ ...current, bili_live_max_failures: value }))} />
+                <Input label='点赞次数' type='number' min={1} max={100} isDisabled={!form.bili_live_fans_medal_enabled || !form.bili_live_like} value={form.bili_live_like_count} onValueChange={(value) => setForm((current) => ({ ...current, bili_live_like_count: value }))} />
+                <Switch size='sm' isDisabled={!form.bili_live_fans_medal_enabled} isSelected={form.bili_live_skip_level_20} onValueChange={(value) => setForm((current) => ({ ...current, bili_live_skip_level_20: value }))}>跳过 20 级粉丝牌</Switch>
+                <Switch size='sm' isDisabled={!form.bili_live_fans_medal_enabled} isSelected={form.bili_live_like} onValueChange={(value) => setForm((current) => ({ ...current, bili_live_like: value }))}>进入直播间后点赞</Switch>
+                <Switch size='sm' isDisabled={!form.bili_live_fans_medal_enabled} isSelected={form.bili_live_send_danmaku} onValueChange={(value) => setForm((current) => ({ ...current, bili_live_send_danmaku: value }))}>进入时发送弹幕</Switch>
+                <Input label='弹幕内容' maxLength={20} isDisabled={!form.bili_live_fans_medal_enabled || !form.bili_live_send_danmaku} value={form.bili_live_danmaku_content} onValueChange={(value) => setForm((current) => ({ ...current, bili_live_danmaku_content: value }))} />
+              </div>
+              <div className='my-4 h-px bg-divider' />
               <div className='mb-3 rounded-xl border border-warning-300/50 bg-warning-50/70 px-3 py-2 text-xs text-warning-800 dark:bg-warning-500/10 dark:text-warning-200'>投币和开启扭蛋会消耗账号资产，必须同时开启任务和消耗授权；默认始终关闭。</div>
               <div className='grid gap-3 sm:grid-cols-2'>
                 <Switch size='sm' isSelected={form.bili_coin_enabled} onValueChange={(value) => setForm((current) => ({ ...current, bili_coin_enabled: value }))}>每日任务包含投币</Switch>
@@ -628,7 +671,7 @@ export default function AccountsPage () {
                 <Input label='单次使用扭蛋币' type='number' min={1} max={100} isDisabled={!form.bili_capsule_enabled} value={form.bili_capsule_count} onValueChange={(value) => setForm((current) => ({ ...current, bili_capsule_count: value }))} />
               </div>
             </div>}
-            {!renewing && <div className='rounded-2xl border border-divider bg-content1/45 p-4'><div className='mb-3'><h4 className='text-sm font-medium'>签到计划</h4><p className='text-xs text-default-400'>自动计划会为账号分配稳定的错峰时间；定时计划按指定时间执行</p></div><div className='grid gap-3 sm:grid-cols-2'><Select label='计划类型' selectedKeys={[form.schedule_mode]} onSelectionChange={(keys) => setForm((current) => ({ ...current, schedule_mode: String(Array.from(keys)[0] || 'auto') as 'auto' | 'fixed' }))}><SelectItem key='auto'>自动计划</SelectItem><SelectItem key='fixed'>定时计划</SelectItem></Select><Input label='执行时间' type='time' startContent={<LuClock3 />} isDisabled={form.schedule_mode !== 'fixed'} value={form.schedule_time} onValueChange={(value) => setForm((current) => ({ ...current, schedule_time: value }))} /><Select className='sm:col-span-2' label='签到动作' selectedKeys={form.scheduled_action ? [form.scheduled_action] : []} onSelectionChange={(keys) => setForm((current) => ({ ...current, scheduled_action: String(Array.from(keys)[0] || '') }))}>{(selectedPlatform?.actions || []).map((action) => <SelectItem key={action}>{actionNames[action] || action}</SelectItem>)}</Select></div></div>}
+            {!renewing && <div className='rounded-2xl border border-divider bg-content1/45 p-4'><div className='mb-3'><h4 className='text-sm font-medium'>签到计划</h4><p className='text-xs text-default-400'>自动计划会为账号分配稳定的错峰时间；粉丝牌挂机通过上方独立开关启用。</p></div><div className='grid gap-3 sm:grid-cols-2'><Select label='计划类型' selectedKeys={[form.schedule_mode]} onSelectionChange={(keys) => setForm((current) => ({ ...current, schedule_mode: String(Array.from(keys)[0] || 'auto') as 'auto' | 'fixed' }))}><SelectItem key='auto'>自动计划</SelectItem><SelectItem key='fixed'>定时计划</SelectItem></Select><Input label='执行时间' type='time' startContent={<LuClock3 />} isDisabled={form.schedule_mode !== 'fixed'} value={form.schedule_time} onValueChange={(value) => setForm((current) => ({ ...current, schedule_time: value }))} /><Select className='sm:col-span-2' label='单次任务' selectedKeys={form.scheduled_action ? [form.scheduled_action] : []} onSelectionChange={(keys) => setForm((current) => ({ ...current, scheduled_action: String(Array.from(keys)[0] || '') }))}>{(selectedPlatform?.actions || []).filter((action) => action !== 'live_fans_medal').map((action) => <SelectItem key={action}>{actionNames[action] || action}</SelectItem>)}</Select></div></div>}
             {editing && <Select label='账号状态' isDisabled={editing.login_status === 'expired' || editing.status === 'credential_expired' || ['PLUGIN_CREDENTIAL_EXPIRED', 'PLUGIN_CREDENTIAL_INVALID'].includes(editing.last_error?.code || '')} description={editing.login_status === 'expired' || editing.status === 'credential_expired' || ['PLUGIN_CREDENTIAL_EXPIRED', 'PLUGIN_CREDENTIAL_INVALID'].includes(editing.last_error?.code || '') ? '登录状态失效，更新登录凭据后才能重新启用' : undefined} selectedKeys={[form.status]} onSelectionChange={(keys) => setForm((current) => ({ ...current, status: String(Array.from(keys)[0] || 'active') }))}><SelectItem key='active'>启用</SelectItem><SelectItem key='disabled'>停用</SelectItem><SelectItem key='credential_expired'>登录失效</SelectItem></Select>}
             <div className='flex items-start gap-2 rounded-2xl bg-default-100/70 px-4 py-3 text-xs leading-5 text-default-500'>
               <LuShieldCheck className='mt-0.5 shrink-0 text-success' />

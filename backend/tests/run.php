@@ -29,6 +29,26 @@ $assert(str_contains($scheduler, 'normalizeLegacy'), 'scheduler must recover leg
 $assert(str_contains($schedule, 'normalizeLegacy'), 'daily schedule must provide legacy settings compatibility');
 $assert(str_contains($process, "\$envFlag('SIGN_WORKER_ENABLED', true)"), 'sign worker must stay enabled by default on upgraded installs');
 $assert(str_contains($process, "\$envFlag('SIGN_SCHEDULER_ENABLED', \$signWorkerEnabled)"), 'scheduler must follow the core worker when its env flag is absent');
+$liveSession = (string)file_get_contents($root . '/app/service/BilibiliLiveSessionService.php');
+$liveWorker = (string)file_get_contents($root . '/app/process/BilibiliLiveWorker.php') . $liveSession;
+$composer = (string)file_get_contents($root . '/composer.json');
+$assert(!preg_match('/\b(?:sleep|usleep)\s*\(/', $liveWorker), 'bilibili live worker must not block the event loop');
+$assert(!preg_match('/\bwhile\s*\(/', $liveWorker), 'bilibili live worker must use bounded event-loop ticks');
+$assert(str_contains($liveSession, '/room/v1/Room/getRoomInfoOld')
+    && !str_contains($liveSession, '/x/space/acc/info'),
+    'bilibili live room discovery must use the supported live endpoint');
+$assert(str_contains($liveSession, 'reconcileTerminalSession($session)')
+    && str_contains($liveSession, 'BILIBILI_LIVE_SESSION_MISSING'),
+    'bilibili live recovery must reconcile terminal and orphaned sessions');
+$assert(str_contains($liveSession, "array_key_exists('live_status', \$medal)")
+    && str_contains($liveSession, "whereNull('next_heartbeat_at')"),
+    'bilibili live discovery must skip known offline medals and repair missing due times');
+foreach (['queue_name', 'TF_bilibili_live_sessions', 'TF_bilibili_live_room_sessions', 'next_heartbeat_at'] as $liveSchemaToken) {
+    $assert(str_contains($schema, $liveSchemaToken), "bilibili live schema must contain {$liveSchemaToken}");
+}
+$assert(str_contains($process, 'bilibili-live-worker'), 'bilibili live worker must be registered');
+$assert(str_contains($scheduler, "'live_fans_medal'"), 'scheduler must enqueue enabled fans-medal sessions');
+$assert(str_contains($composer, 'workerman/http-client'), 'bilibili live worker requires the async HTTP client');
 $assert(str_contains($route, "qq-relay/apply"), 'QQ relay application route must exist');
 $assert(str_contains($route, "qq-login-verification.txt"), 'QQ relay verification route must exist');
 $assert(str_contains($settings, "qq_relay_application_status"), 'QQ relay application settings must exist');

@@ -17,6 +17,7 @@ export const actionNames: Record<string, string> = {
   live_sign: '直播签到',
   live_daily_bag: '直播每日礼包',
   live_heartbeat: '直播心跳',
+  live_fans_medal: '粉丝牌挂机',
   capsule_open: '开启直播扭蛋',
   comic_sign: '漫画签到',
   vip_sign: '会员签到',

@@ -57,19 +57,27 @@ final class SignSchedulerService
         // 在创建任务前先计算下次时间，避免异常配置留下半批任务并卡住队首。
         $nextRunAt = DailySchedule::next($settings, $this->seed($account));
         $action = trim((string)($settings['scheduled_action'] ?? ($plugin->supportedActions()[0] ?? '')));
-        (new SignTaskService())->create(
-            (int)$account->user_id,
-            (int)$account->id,
-            $action,
-            'schedule',
-            date('Y-m-d')
-        );
+        $actions = $action !== '' && $action !== 'live_fans_medal' ? [$action] : [];
+        if ((string)$account->plugin_code === 'bilibili'
+            && ($settings['live_fans_medal_enabled'] ?? false) === true) {
+            $actions[] = 'live_fans_medal';
+        }
+        $actions = array_values(array_unique($actions));
+        foreach ($actions as $scheduledAction) {
+            (new SignTaskService())->create(
+                (int)$account->user_id,
+                (int)$account->id,
+                $scheduledAction,
+                'schedule',
+                date('Y-m-d')
+            );
+        }
 
         Db::table('TF_plugin_accounts')->where('id', $account->id)->update([
             'next_run_at' => $nextRunAt,
             'updated_at' => date('Y-m-d H:i:s'),
         ]);
-        return true;
+        return $actions !== [];
     }
 
     private function recordDispatchFailure(object $account, Throwable $exception): void

@@ -3,6 +3,7 @@
 namespace app\service;
 
 use app\exception\ApiException;
+use app\sign\executor\SignTaskExecutor;
 use app\sign\registry\PluginRegistry;
 use support\Db;
 
@@ -65,6 +66,9 @@ final class SignTaskService
             'user_id' => $userId,
             'account_id' => $accountId,
             'plugin_code' => $account->plugin_code,
+            'queue_name' => $account->plugin_code === 'bilibili' && $action === 'live_fans_medal'
+                ? SignTaskExecutor::QUEUE_BILIBILI_LIVE
+                : SignTaskExecutor::QUEUE_DEFAULT,
             'action' => $action,
             'trigger_type' => $triggerType,
             'idempotency_key' => $idempotencyKey,
@@ -169,7 +173,7 @@ final class SignTaskService
         $offset = ($page - 1) * $perPage;
         $query = Db::table('TF_sign_records')->where('task_id', $task->id);
         $status = trim((string)($filters['status'] ?? ''));
-        if (in_array($status, ['succeeded', 'already_done', 'skipped', 'failed'], true)) {
+        if (in_array($status, ['running', 'succeeded', 'already_done', 'skipped', 'failed'], true)) {
             $query->where('status', $status);
         }
         $action = trim((string)($filters['action'] ?? ''));
@@ -254,6 +258,9 @@ final class SignTaskService
             'user_id' => $userId,
             'account_id' => (int)$source->account_id,
             'plugin_code' => (string)$source->plugin_code,
+            'queue_name' => (string)$source->plugin_code === 'bilibili' && (string)$source->action === 'live_fans_medal'
+                ? SignTaskExecutor::QUEUE_BILIBILI_LIVE
+                : SignTaskExecutor::QUEUE_DEFAULT,
             'action' => (string)$source->action,
             'trigger_type' => 'admin_rerun',
             'idempotency_key' => hash('sha256', $source->task_no . ':admin_rerun:' . $newTaskNo),
