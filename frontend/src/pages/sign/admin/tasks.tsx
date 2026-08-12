@@ -25,6 +25,7 @@ export default function AdminTasksPage () {
   const [pluginCode, setPluginCode] = useState('all');
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [busy, setBusy] = useState('');
   const navigate = useNavigate();
 
@@ -63,6 +64,17 @@ export default function AdminTasksPage () {
     }
   };
 
+  const refresh = async () => {
+    setRefreshing(true);
+    try {
+      await load();
+    } catch (error) {
+      toast.error(errorMessage(error));
+    } finally {
+      setRefreshing(false);
+    }
+  };
+
   const totalPages = result?.total_pages ?? Math.max(1, Math.ceil((result?.total ?? 0) / perPage));
   const pluginOptions = [{ code: 'all', name: '全部插件' }, ...plugins];
 
@@ -70,7 +82,7 @@ export default function AdminTasksPage () {
     <div className='flex flex-col gap-4'>
       <div className='flex flex-wrap items-center justify-between gap-2'>
         <p className='text-sm text-default-500'>共 {result?.total ?? 0} 条任务</p>
-        <div className='flex flex-wrap gap-2'><Select items={pluginOptions} aria-label='插件筛选' className='w-44' selectedKeys={[pluginCode]} onSelectionChange={(keys) => { setPluginCode(String(Array.from(keys)[0] || 'all')); setPage(1); }}>{(plugin) => <SelectItem key={plugin.code}>{plugin.name}</SelectItem>}</Select><Select aria-label='状态筛选' className='w-40' selectedKeys={[status]} onSelectionChange={(keys) => { setStatus(String(Array.from(keys)[0] || 'all')); setPage(1); }}><SelectItem key='all'>全部状态</SelectItem><SelectItem key='pending'>等待中</SelectItem><SelectItem key='running'>运行中</SelectItem><SelectItem key='completed'>任务完成</SelectItem><SelectItem key='failed'>失败</SelectItem><SelectItem key='cancelled'>已取消</SelectItem></Select><Tooltip content='刷新任务列表'><Button isIconOnly variant='flat' aria-label='刷新任务列表' onPress={() => void load()}><LuRefreshCw /></Button></Tooltip></div>
+        <div className='flex flex-wrap gap-2'><Select items={pluginOptions} aria-label='插件筛选' className='w-44' selectedKeys={[pluginCode]} onSelectionChange={(keys) => { setPluginCode(String(Array.from(keys)[0] || 'all')); setPage(1); }}>{(plugin) => <SelectItem key={plugin.code}>{plugin.name}</SelectItem>}</Select><Select aria-label='状态筛选' className='w-40' selectedKeys={[status]} onSelectionChange={(keys) => { setStatus(String(Array.from(keys)[0] || 'all')); setPage(1); }}><SelectItem key='all'>全部状态</SelectItem><SelectItem key='pending'>等待中</SelectItem><SelectItem key='running'>运行中</SelectItem><SelectItem key='completed'>任务完成</SelectItem><SelectItem key='failed'>失败</SelectItem><SelectItem key='cancelled'>已取消</SelectItem></Select><Tooltip content='刷新任务列表'><Button isIconOnly variant='flat' aria-label='刷新任务列表' isLoading={refreshing} onPress={() => void refresh()}><LuRefreshCw /></Button></Tooltip></div>
       </div>
       <Card className='border border-default-200/60 shadow-sm'><CardBody className='p-0'>
         {loading

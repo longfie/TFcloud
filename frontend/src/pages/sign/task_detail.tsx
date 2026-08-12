@@ -10,7 +10,7 @@ import { toast } from 'react-hot-toast';
 import { LuArrowLeft, LuRefreshCw, LuSquare } from 'react-icons/lu';
 import { useNavigate, useParams } from 'react-router-dom';
 
-import { apiRequest } from '@/api/client';
+import { apiRequest, type LoadingScope } from '@/api/client';
 import StatusChip from '@/components/sign/status_chip';
 import type { Paginated, SignRecord, SignRun, SignTask } from '@/types/sign';
 import { actionNames, errorMessage, formatDateTime, pluginNames } from '@/utils/sign';
@@ -31,12 +31,13 @@ export default function TaskDetailPage ({ admin = false }: { admin?: boolean }) 
   const apiBase = admin ? '/admin/sign-tasks' : '/sign-tasks';
   const backPath = admin ? '/TFYT/admin/tasks' : '/TFYT/tasks';
 
-  const load = useCallback(async () => {
+  const load = useCallback(async (loadingScope: LoadingScope = 'local') => {
     const [taskData, runRows, recordRows] = await Promise.all([
-      apiRequest<SignTask>({ url: `${apiBase}/${taskNo}` }),
-      apiRequest<Paginated<SignRun>>({ url: `${apiBase}/${taskNo}/runs`, params: { page: runPage, per_page: pageSize } }),
+      apiRequest<SignTask>({ url: `${apiBase}/${taskNo}`, loadingScope }),
+      apiRequest<Paginated<SignRun>>({ url: `${apiBase}/${taskNo}/runs`, params: { page: runPage, per_page: pageSize }, loadingScope }),
       apiRequest<Paginated<SignRecord>>({
         url: `${apiBase}/${taskNo}/records`,
+        loadingScope,
         params: {
           page: recordPage,
           per_page: pageSize,
@@ -57,7 +58,7 @@ export default function TaskDetailPage ({ admin = false }: { admin?: boolean }) 
   useEffect(() => {
     if (!task || !['pending', 'retrying', 'running'].includes(task.status)) return;
     const timer = window.setInterval(() => {
-      void load().catch(() => undefined);
+      void load('silent').catch(() => undefined);
     }, 1500);
     return () => window.clearInterval(timer);
   }, [load, task?.status]);

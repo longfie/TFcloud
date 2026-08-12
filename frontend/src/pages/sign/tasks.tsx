@@ -21,6 +21,7 @@ export default function TasksPage () {
   const [result, setResult] = useState<Paginated<SignTask> | null>(null);
   const [platforms, setPlatforms] = useState<Platform[]>([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [status, setStatus] = useState('all');
   const [pluginCode, setPluginCode] = useState('all');
   const [page, setPage] = useState(1);
@@ -61,6 +62,17 @@ export default function TasksPage () {
     }
   };
 
+  const refresh = async () => {
+    setRefreshing(true);
+    try {
+      await load();
+    } catch (error) {
+      toast.error(errorMessage(error));
+    } finally {
+      setRefreshing(false);
+    }
+  };
+
   const tasks = result?.items ?? [];
   const totalPages = result?.total_pages ?? Math.max(1, Math.ceil((result?.total ?? 0) / perPage));
   const platformOptions = [{ code: 'all', name: '全部平台' }, ...platforms];
@@ -81,7 +93,7 @@ export default function TasksPage () {
             <SelectItem key='failed'>失败</SelectItem>
             <SelectItem key='cancelled'>已取消</SelectItem>
           </Select>
-          <Tooltip content='刷新任务列表'><Button isIconOnly variant='flat' aria-label='刷新任务列表' onPress={() => void load()}><LuRefreshCw /></Button></Tooltip>
+          <Tooltip content='刷新任务列表'><Button isIconOnly variant='flat' aria-label='刷新任务列表' isLoading={refreshing} onPress={() => void refresh()}><LuRefreshCw /></Button></Tooltip>
         </div>
       </div>
       <Card className='tf-glass-card tf-table-card'>

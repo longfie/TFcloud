@@ -44,10 +44,11 @@ export default function TaskProgressModal ({ task, onClose }: TaskProgressModalP
     const tick = async () => {
       try {
         const [updated, recordPage] = await Promise.all([
-          apiRequest<SignTask>({ url: `/sign-tasks/${task.task_no}` }),
+          apiRequest<SignTask>({ url: `/sign-tasks/${task.task_no}`, loadingScope: 'silent' }),
           apiRequest<Paginated<SignRecord>>({
             url: `/sign-tasks/${task.task_no}/records`,
             params: { page: 1, per_page: 500 },
+            loadingScope: 'silent',
           }),
         ]);
         if (cancelled) return;

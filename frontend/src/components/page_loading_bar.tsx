@@ -1,19 +1,27 @@
 import { useEffect, useRef, useState } from 'react';
+import { useLocation } from 'react-router-dom';
 
 import { usePageLoading } from '@/hooks/use-page-loading';
 
 const FINISH_DELAY_MS = 240;
+const SHOW_DELAY_MS = 140;
 
 export default function PageLoadingBar () {
-  const [visible, setVisible] = useState(true);
+  const location = useLocation();
+  const [visible, setVisible] = useState(false);
   const [progress, setProgress] = useState(10);
   const finishTimer = useRef<number | null>(null);
+  const showTimer = useRef<number | null>(null);
   const loading = usePageLoading();
 
   useEffect(() => {
     if (finishTimer.current !== null) {
       window.clearTimeout(finishTimer.current);
       finishTimer.current = null;
+    }
+    if (showTimer.current !== null) {
+      window.clearTimeout(showTimer.current);
+      showTimer.current = null;
     }
 
     if (!loading) {
@@ -26,18 +34,30 @@ export default function PageLoadingBar () {
       return;
     }
 
-    setVisible(true);
     setProgress((current) => current >= 95 ? 10 : Math.max(10, current));
+    showTimer.current = window.setTimeout(() => {
+      setVisible(true);
+      showTimer.current = null;
+    }, SHOW_DELAY_MS);
     const timer = window.setInterval(() => {
       setProgress((current) => Math.min(92, current + Math.max(1.2, (92 - current) * 0.12)));
     }, 180);
 
-    return () => window.clearInterval(timer);
+    return () => {
+      window.clearInterval(timer);
+      if (showTimer.current !== null) {
+        window.clearTimeout(showTimer.current);
+        showTimer.current = null;
+      }
+    };
   }, [loading]);
 
   useEffect(() => () => {
     if (finishTimer.current !== null) window.clearTimeout(finishTimer.current);
+    if (showTimer.current !== null) window.clearTimeout(showTimer.current);
   }, []);
+
+  if (location.pathname === '/' || location.pathname === '/login') return null;
 
   return (
     <div

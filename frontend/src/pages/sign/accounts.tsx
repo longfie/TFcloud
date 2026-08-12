@@ -295,7 +295,10 @@ export default function AccountsPage () {
     let stopped = false;
     const timer = window.setInterval(async () => {
       try {
-        const result = await apiRequest<PlatformQrFlow>({ url: `/platform-auth/${form.platform_code}/qr/${qrFlow.flow_no}` });
+        const result = await apiRequest<PlatformQrFlow>({
+          url: `/platform-auth/${form.platform_code}/qr/${qrFlow.flow_no}`,
+          loadingScope: 'silent',
+        });
         if (stopped) return;
         setQrFlow((current) => ({ ...current, ...result }));
         if (result.status === 'succeeded' && result.account) {

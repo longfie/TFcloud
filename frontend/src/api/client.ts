@@ -6,6 +6,16 @@ export const AUTH_TOKEN_KEY = 'tf-sign-access-token';
 export const AUTH_EXPIRED_EVENT = 'tf-sign-auth-expired';
 export const GLOBAL_LOADING_EVENT = 'tf-global-loading';
 
+export type LoadingScope = 'page' | 'local' | 'silent';
+
+export interface ApiRequestConfig extends AxiosRequestConfig {
+  /**
+   * page: drives the top loading bar; local: feedback is rendered by the caller;
+   * silent: background refresh/polling without global feedback.
+   */
+  loadingScope?: LoadingScope;
+}
+
 let activeRequests = 0;
 const trackedRequests = new WeakSet<object>();
 
@@ -60,7 +70,7 @@ function redirectToInstaller (code?: string) {
 }
 
 client.interceptors.request.use((config) => {
-  beginRequest(config);
+  if ((config as ApiRequestConfig).loadingScope === 'page') beginRequest(config);
   const token = localStorage.getItem(AUTH_TOKEN_KEY);
   if (token) config.headers.Authorization = `Bearer ${token}`;
   return config;
@@ -89,7 +99,7 @@ client.interceptors.response.use(
   }
 );
 
-export async function apiRequest<T> (config: AxiosRequestConfig): Promise<T> {
+export async function apiRequest<T> (config: ApiRequestConfig): Promise<T> {
   const response = await client.request<ApiEnvelope<T>>(config);
   if (response.data.code !== 'SUCCESS') {
     redirectToInstaller(response.data.code);
